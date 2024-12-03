@@ -24,7 +24,7 @@ io.on("connection", (socket) => {
   console.log("user connected");
   io.emit("player/points", players);
   socket.on("player/answer", (args) => {
-    console.log("message :", args);
+    console.log("message :", args.message);
     players[0].point += 100;
     io.emit("player/points", players);
   });
