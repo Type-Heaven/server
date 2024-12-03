@@ -9,10 +9,6 @@ const io = new Server(server, {
   },
 });
 
-app.get("/", (req, res) => {
-  res.send("<h1>Hello world</h1>");
-});
-
 const players = [
   {
     name: "test_user",
@@ -34,5 +30,22 @@ io.on("connection", (socket) => {
 });
 
 server.listen(3000, () => {
-  console.log("server running at http://localhost:3000");
+  console.log("server running at http://localhost:3000")
+});
+
+const ScoreController = require("./controllers/ScoreController");
+
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+
+app.get("/", (req, res) => {
+  res.send("<h1>Hello world</h1>");
+});
+// Endpoint untuk menghitung skor
+app.post("/calculate-score", ScoreController.score);
+
+// Start server
+const PORT = 3001;
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
 });
