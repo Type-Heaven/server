@@ -19,48 +19,57 @@ let players = [
     point: 100,
   },
 ];
+
 let question = "";
 let wordsQuestion = [];
-(async () => {
-  question = await generateQuestion();
-  wordsQuestion = question.split(" ");
-  console.log(wordsQuestion);
-})();
-let wordOffset = 1; //start from 1
+let wordOffset = 0;
+// (async () => {
+//   question = await generateQuestion();
+//   wordsQuestion = question.split(" ");
+// })();
 
 io.on("connection", (socket) => {
-  //generate question
-  io.emit("question", { question });
-  io.emit("wordQuestion", { word: wordsQuestion[0], offset: wordOffset });
-
-  //show player & player score
-  io.emit("player", { players });
+  console.log("user connected");
 
   //add player name
-  socket.on("player/name", (args) => {
-    // console.log(args.name, "this args");
+  socket.on("player/name", async (args) => {
     players.push({
       name: args.name,
       point: 0,
     });
-    // console.log("current user : ", players);
+    console.log("player added", args);
+    question = await generateQuestion();
+    wordsQuestion = question.split(" ");
+    // console.log(question);
+
+    //generate question
+    io.emit("question", { question });
+    io.emit("wordQuestion", { word: wordsQuestion[0], offset: wordOffset });
+
+    //show player & player score
+    io.emit("player", { players });
   });
-  console.log("user connected");
 
   //players chat
   ChatController.handlerConnection(io, socket);
 
   //get player answer
   socket.on("player/answer", (args) => {
-    console.log("answer :", args.answer);
+    console.log("answer :", args);
     const answer = args.answer;
 
+    const player = players.find((player) => player.name == args.name);
+    console.log("current player", player);
+    console.log("list players", players);
+    console.log("offset", wordOffset);
     //check player answer
-    if (wordOffset != wordsQuestion.length) {
-      players[0].point += SocketScoreController.score(
-        wordsQuestion[wordOffset - 1],
-        answer
-      );
+    if (wordOffset <= wordsQuestion.length) {
+      if (answer) {
+        player.point += SocketScoreController.score(
+          wordsQuestion[wordOffset - 1],
+          answer
+        );
+      }
       wordOffset++;
       io.emit("wordQuestion", {
         word: wordsQuestion[wordOffset - 1],
@@ -68,8 +77,24 @@ io.on("connection", (socket) => {
       });
       io.emit("player", { players });
     } else {
-      io.emit("wordQuestion", { word: "Game is Done" });
+      io.emit("wordQuestion", {
+        word: "Game is Done",
+        offset: wordOffset,
+      });
     }
+  });
+  socket.on("logout", () => {
+    console.log("user logout");
+    //reset offset and question
+    players = [
+      {
+        name: "test_user",
+        point: 100,
+      },
+    ];
+    wordOffset = 1;
+    question = "";
+    wordsQuestion = [];
   });
   socket.on("disconnect", () => {
     console.log("user disconnected");
