@@ -4,42 +4,44 @@ const { Server } = require("socket.io");
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: "*",
-  },
+    cors: {
+        origin: "*",
+    },
 });
 
 const players = [
-  {
-    name: "test_user",
-    point: 100,
-  },
+    {
+        name: "test_user",
+        point: 100,
+    },
 ];
 
 io.on("connection", (socket) => {
-  console.log("user connected");
-  io.emit("player/points", players);
-  socket.on("player/answer", (args) => {
-    console.log("message :", args.message);
-    players[0].point += 100;
+    console.log("user connected");
     io.emit("player/points", players);
-  });
-  socket.on("disconnect", () => {
-    console.log("user disconnected");
-  });
+    ChatController.handlerConnection(io, socket);
+    socket.on("player/answer", (args) => {
+        console.log("message :", args.message);
+        players[0].point += 100;
+        io.emit("player/points", players);
+    });
+    socket.on("disconnect", () => {
+        console.log("user disconnected");
+    });
 });
 
 server.listen(3000, () => {
-  console.log("server running at http://localhost:3000")
+    console.log("server running at http://localhost:3000");
 });
 
 const ScoreController = require("./controllers/ScoreController");
+const ChatController = require("./controllers/ChatController");
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("<h1>Hello world</h1>");
+    res.send("<h1>Hello world</h1>");
 });
 // Endpoint untuk menghitung skor
 app.post("/calculate-score", ScoreController.score);
