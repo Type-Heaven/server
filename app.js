@@ -2,6 +2,7 @@ if (process.env.NODE_ENV !== "production") require("dotenv").config();
 const express = require("express");
 const { createServer } = require("node:http");
 const { Server } = require("socket.io");
+const ChatController = require("./controllers/ChatController");
 const SocketScoreController = require("./controllers/SocketScoreController");
 const generateQuestion = require("./helpers/questionRandomize");
 const app = express();
@@ -27,7 +28,6 @@ let wordsQuestion = [];
 })();
 let wordOffset = 1; //start from 1
 
-
 io.on("connection", (socket) => {
   //generate question
   io.emit("question", { question });
@@ -46,6 +46,9 @@ io.on("connection", (socket) => {
     // console.log("current user : ", players);
   });
   console.log("user connected");
+
+  //players chat
+  ChatController.handlerConnection(io, socket);
 
   //get player answer
   socket.on("player/answer", (args) => {
