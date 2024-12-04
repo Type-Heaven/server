@@ -1,5 +1,5 @@
 module.exports = class SocketScoreController {
-  static score(target, userInput) {
+  static score(target, userInput, questionLength) {
     try {
       console.log("target", userInput);
       console.log("userInput", userInput);
@@ -13,7 +13,7 @@ module.exports = class SocketScoreController {
       const score = (correctChars / target?.length) * 100;
       console.log(score, "score");
       // 2. Kirimkan akurasi
-      return score || 0;
+      return score / questionLength || 0;
     } catch (error) {
       console.log("🚀 ~ SocketScoreController ~ score ~ error:", error);
     }

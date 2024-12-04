@@ -67,7 +67,8 @@ io.on("connection", (socket) => {
       if (answer) {
         player.point += SocketScoreController.score(
           wordsQuestion[wordOffset - 1],
-          answer
+          answer,
+          wordsQuestion.length
         );
       }
       wordOffset++;
