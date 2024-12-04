@@ -1,7 +1,9 @@
+if (process.env.NODE_ENV !== "production") require("dotenv").config();
 const express = require("express");
 const { createServer } = require("node:http");
 const { Server } = require("socket.io");
 const SocketScoreController = require("./controllers/SocketScoreController");
+const generateQuestion = require("./helpers/questionRandomize");
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
@@ -16,15 +18,23 @@ let players = [
     point: 100,
   },
 ];
-
-const question = "Kabar";
-
+let question = "";
+let wordsQuestion = [];
+(async () => {
+  question = await generateQuestion();
+  wordsQuestion = question.split(" ");
+  console.log(wordsQuestion);
+})();
+let wordOffset = 1; //start from 1
 io.on("connection", (socket) => {
-  //show player & player score
-  io.emit("player/points", { players });
+  //generate question
   io.emit("question", { question });
+  io.emit("wordQuestion", { word: wordsQuestion[0], offset: wordOffset });
 
-  //change player name
+  //show player & player score
+  io.emit("player", { players });
+
+  //add player name
   socket.on("player/name", (args) => {
     // console.log(args.name, "this args");
     players.push({
@@ -39,10 +49,22 @@ io.on("connection", (socket) => {
   socket.on("player/answer", (args) => {
     console.log("answer :", args.answer);
     const answer = args.answer;
+
     //check player answer
-    // players[0].point += 100;
-    players[0].point += SocketScoreController.score(question, answer);
-    io.emit("player/points", { players });
+    if (wordOffset != wordsQuestion.length) {
+      players[0].point += SocketScoreController.score(
+        wordsQuestion[wordOffset - 1],
+        answer
+      );
+      wordOffset++;
+      io.emit("wordQuestion", {
+        word: wordsQuestion[wordOffset - 1],
+        offset: wordOffset,
+      });
+      io.emit("player", { players });
+    } else {
+      io.emit("wordQuestion", { word: "Game is Done" });
+    }
   });
   socket.on("disconnect", () => {
     console.log("user disconnected");
@@ -52,21 +74,3 @@ io.on("connection", (socket) => {
 server.listen(3000, () => {
   console.log("server running at http://localhost:3000");
 });
-
-// const ScoreController = require("./controllers/ScoreController");
-
-// app.use(express.urlencoded({ extended: false }));
-// app.use(express.json());
-
-// app.get("/", (req, res) => {
-//   res.send("<h1>Hello world</h1>");
-// });
-
-// // Endpoint untuk menghitung skor
-// app.post("/calculate-score", ScoreController.score);
-
-// // Start server
-// const PORT = 3001;
-// app.listen(PORT, () => {
-//   console.log(`Server running on http://localhost:${PORT}`);
-// });
