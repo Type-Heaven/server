@@ -26,6 +26,8 @@ let wordsQuestion = [];
   console.log(wordsQuestion);
 })();
 let wordOffset = 1; //start from 1
+
+
 io.on("connection", (socket) => {
   //generate question
   io.emit("question", { question });
