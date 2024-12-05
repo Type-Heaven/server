@@ -8,100 +8,137 @@ const generateQuestion = require("./helpers/questionRandomize");
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: "*",
-  },
+    cors: {
+        origin: "*",
+    },
 });
 
 let players = [
-  {
-    name: "test_user",
-    point: 100,
-  },
+    {
+        name: "test_user",
+        point: 100,
+    },
 ];
 
 let question = "";
 let wordsQuestion = [];
-let wordOffset = 0;
+let wordOffset = 1;
 // (async () => {
 //   question = await generateQuestion();
 //   wordsQuestion = question.split(" ");
 // })();
 
-io.on("connection", (socket) => {
-  console.log("user connected");
+// (async () => {
+//     // Start game
+//     if (!question) {
+//         question = await generateQuestion();
+//         wordsQuestion = question.split(" ");
+//     }
+// })();
 
-  //add player name
-  socket.on("player/name", async (args) => {
-    players.push({
-      name: args.name,
-      point: 0,
-    });
-    console.log("player added", args);
-    question = await generateQuestion();
-    wordsQuestion = question.split(" ");
-    // console.log(question);
+async function initializeGame() {
+    // console.log("init question");
+    if (!question) {
+        // console.log("generate question");
 
-    //generate question
-    io.emit("question", { question });
-    io.emit("wordQuestion", { word: wordsQuestion[0], offset: wordOffset });
+        question = await generateQuestion();
+        // console.log("question", question);
 
-    //show player & player score
-    io.emit("player", { players });
-  });
-
-  //players chat
-  ChatController.handlerConnection(io, socket);
-
-  //get player answer
-  socket.on("player/answer", (args) => {
-    console.log("answer :", args);
-    const answer = args.answer;
-
-    const player = players.find((player) => player.name == args.name);
-    console.log("current player", player);
-    console.log("list players", players);
-    console.log("offset", wordOffset);
-    //check player answer
-    if (wordOffset <= wordsQuestion.length) {
-      if (answer) {
-        player.point += SocketScoreController.score(
-          wordsQuestion[wordOffset - 1],
-          answer,
-          wordsQuestion.length
-        );
-      }
-      wordOffset++;
-      io.emit("wordQuestion", {
-        word: wordsQuestion[wordOffset - 1],
-        offset: wordOffset,
-      });
-      io.emit("player", { players });
-    } else {
-      io.emit("wordQuestion", {
-        word: "Game is Done",
-        offset: wordOffset,
-      });
+        wordsQuestion = question.split(" ").filter((word) => word !== "");
     }
-  });
-  socket.on("logout", () => {
-    console.log("user logout");
-    //reset offset and question
-    players = [
-      {
-        name: "test_user",
-        point: 100,
-      },
-    ];
-    wordOffset = 1;
-    question = "";
-    wordsQuestion = [];
-  });
-  socket.on("disconnect", () => {
-    console.log("user disconnected");
-  });
+}
+
+io.on("connection", async (socket) => {
+    console.log("user connected");
+
+    //add player name
+    socket.on("player/name", async (args) => {
+        players.push({
+            name: args.name,
+            point: 0,
+            wordOffset: 1,
+        });
+        console.log("player added", args);
+        // question = await generateQuestion();
+        // wordsQuestion = question.split(" ");
+        // console.log(question);
+
+        await initializeGame();
+        //generate question
+        io.emit("question", { question });
+        io.emit("wordQuestion", { word: wordsQuestion[0], offset: 1 });
+
+        //show player & player score
+        io.emit("player", { players });
+    });
+
+    //players chat
+    ChatController.handlerConnection(io, socket);
+
+    //get player answer
+    socket.on("player/answer", (args) => {
+        console.log("answer :", args);
+        const answer = args.answer;
+
+        const player = players.find((player) => player.name === args.name);
+        console.log("current player", player);
+        console.log("list players", players);
+        console.log("offset", player.wordOffset);
+        //check player answer
+        if (player && player.wordOffset < wordsQuestion.length) {
+            if (answer) {
+                player.point += SocketScoreController.score(
+                    wordsQuestion[player.wordOffset - 1],
+                    answer,
+                    wordsQuestion.length
+                );
+            }
+            player.wordOffset++;
+
+            if (player && player.wordOffset < wordsQuestion.length) {
+                io.emit("wordQuestion", {
+                    word: wordsQuestion[player.wordOffset],
+                    offset: player.wordOffset,
+                });
+            } else {
+                io.emit("wordQuestion", {
+                    word: "Game is Done",
+                    offset: player.wordOffset,
+                });
+            }
+            io.emit("player", { players });
+        }
+
+        //   io.emit("wordQuestion", {
+        //     word: wordsQuestion[wordOffset - 1],
+        //     offset: wordOffset,
+        //   });
+        //   io.emit("player", { players });
+        // } else {
+        //   io.emit("wordQuestion", {
+        //     word: "Game is Done",
+        //     offset: wordOffset,
+        //   });
+        // }
+    });
+    socket.on("logout", () => {
+        console.log("user logout");
+        //reset offset and question
+        players = [
+            {
+                name: "test_user",
+                point: 100,
+            },
+        ];
+        wordOffset = 1;
+        question = "";
+        wordsQuestion = [];
+    });
+    socket.on("disconnect", () => {
+        console.log("user disconnected");
+    });
 });
 
 server.listen(3000, () => {
-  console.log("server running at http://localhost:3000");
+    console.log("server running at http://localhost:3000");
 });
